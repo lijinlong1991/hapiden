@@ -1,0 +1,11 @@
+Package: hiboc
+Type: Package
+Title: Haipliod identification by oil content
+Version: 0.1.0
+Author: Jinlong Li
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description:The package is used for hapliod kernels identification by oil content (OC) in DH-based breeding in maize. 
+    To estimate the Efficiency and threshold of OC with various parents.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
