@@ -1,0 +1,413 @@
+---
+title: "hap_iden_oc"
+author: "jinlong"
+date: "4/19/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+read data
+```{r}
+library(data.table)
+
+m_oc <- fread("materal2.txt", data.table=FALSE)
+kernel_oc<-fread("oc_identify2.txt", data.table=FALSE)
+hir<-fread("HIR.txt", data.table=FALSE)
+i_oc<-fread("inducer.txt", data.table=FALSE)
+
+
+m_oc<-m_oc[which(m_oc$m %in% c("ZD958","JK968","ND678","XY335")),]
+
+l<-c("ZD958","JK968","ND678","XY335")
+m_oc$m<-factor(m_oc$m,levels=l)
+levels(m_oc$m)
+k_oc<-kernel_oc
+
+ll<-c("ZD958/CAU1","ZD958/CAU2","ZD958/CAU3","ZD958/CAU4","ZD958/CAU5","ZD958/CAU6","ZD958/CAUZPY","ZD958/CHOI1","ZD958/CHOI2","ZD958/CHOI3","ZD958/CHOI4","JK968/CAU6","JK968/CHOI4","ND678/CAU6","ND678/CHOI4","XY335/CAU6","XY335/CHOI4")
+
+k_oc$group<-factor(k_oc$group,levels=ll)
+levels(k_oc$group)
+
+lll<-c("CAU1","CAU2","CAU3","CAU4","CAU5","CAU6","CAUZPY","CHOI1","CHOI2","CHOI3","CHOI4")
+i_oc$inducer<-factor(i_oc$inducer,levels = lll)
+levels(i_oc$inducer)
+
+
+library(plyr)
+oil_sum<-ddply(k_oc,.(male,female,type),function(sub){
+  data.frame(oil_mean=mean(sub$oil,na.rm = TRUE),oil_sd=sd(sub$oil,na.rm = TRUE),
+             w_mean=mean(sub$weight,na.rm = TRUE),w_sd=sd(sub$weight,na.rm = TRUE),no=length(sub$weight))})
+write.table(oil_sum,"oil_sum.txt")
+
+m_sum<-ddply(m_oc,.(m),function(sub){
+  data.frame(oil_mean=mean(sub$oil,na.rm = TRUE),oil_sd=sd(sub$oil,na.rm = TRUE),
+             w_mean=mean(sub$weight,na.rm = TRUE),w_sd=sd(sub$weight,na.rm = TRUE),no=length(sub$weight))})
+
+
+
+
+library(ggplot2)
+library(ggpubr)
+
+
+p1<-ggplot(i_oc, aes(x = inducer, y = oc))+ #按dose进行分面  
+ geom_violin(trim=FALSE,fill="#009E73") +
+ geom_boxplot(position = position_dodge(width = 0.9), outlier.size = 0.9, width = 0.2, show.legend = FALSE,outlier.shape = NA,fill="#009E73")+
+  theme_bw()+
+  theme_classic()+ 
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5)) +
+  labs(x = "Inducers",y = "Oil contents (OC) / %",title="")+ 
+  theme(panel.background = element_rect(fill = "white", colour = "black", size = 1))
+
+
+
+p2<-ggplot(m_oc, aes(x = m, y = oil))+ #按dose进行分面  
+ geom_violin(trim=FALSE,fill='#999999') +
+ geom_boxplot(position = position_dodge(width = 0.9), outlier.size = 0.9, width = 0.2, show.legend = FALSE,outlier.shape = NA,fill='#999999')+
+  theme_bw()+
+  theme_classic()+ 
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5)) +
+  labs(x = "Female parents (FP)",y = "Oil contents (OC) / %",title="")+ 
+  theme(panel.background = element_rect(fill = "white", colour = "black", size = 1))
+
+
+
+p3<-ggplot(k_oc, aes(x = group, y = oil, fill = type))+ #按dose进行分面  
+ geom_violin(trim=FALSE,aes(fill = type)) +
+ geom_boxplot(position = position_dodge(width = 0.9), outlier.size = 0.9, width = 0.2, show.legend = FALSE,outlier.shape = NA)+
+ #facet_wrap(~pheno,nrow=1, scales="free_y")+ 
+  theme_bw()+
+ scale_fill_manual(values=c("#009E73",'#999999'))+
+  theme_classic()+ 
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5))+
+  guides(fill=guide_legend(title="Kernel type")) +
+  labs(x = "Materials",y = "Oil contents (OC) / %",title="")+ 
+  theme(panel.background = element_rect(fill = "white", colour = "black", size = 1),legend.position=c(0.9, 0.85))
+
+
+p<-ggarrange(ggarrange(p1,p2,ncol=2,labels=c("A","B")),p3,nrow=2,labels=c("","C"))
+
+
+pdf("oil.pdf", width=8, height=8)
+p
+dev.off()
+
+
+```
+
+
+```{r}
+
+
+k_oc$group<-as.factor(k_oc$group)
+label<-levels(k_oc$group)
+
+res_oil<-data.frame()
+acc_sum<-data.frame()
+for (n in 1:22){
+data<-k_oc[which(k_oc$group==label[n]),]
+
+data_H<-data[which(data$type=="H"),]
+data_D<-data[which(data$type=="C"),]
+#if (nrow(data_H)<nrow(data_D)){
+#  data_D<-sample_n(data_D,nrow(data_H))
+#}else{
+#  data_H<-sample_n(data_H,nrow(data_D))
+#}
+#data_sel<-rbind(data_H,data_D)
+
+###阈值检索
+len<-nrow(data_sel)
+type<-data_sel$type
+oil<-data_sel$oil
+x<-vector(length=len)
+#a_data<-matrix(nrow=800,ncol=5)
+a_data<-data.frame()
+for (i in 1:800) {
+  k<-i*0.01
+  TH=0
+  FH=0
+  TD=0
+  FD=0
+  for (j in 1:len) {
+    if (oil[j] < k) { x[j]="H"  }
+    else x[j]="C"
+    
+    if (x[j]=="H" & type[j]=="H"){
+      TH=TH+1 }
+    if (x[j]=="H" & type[j]=="C"){
+      FH=FH+1 }
+    if (x[j]=="C" & type[j]=="C"){
+      TD=TD+1 }
+    if (x[j]=="C" & type[j]=="H"){
+      FD=FD+1 }
+    
+  }
+  
+  HCR=(TH+TD)/(TH+TD+FH+FD)###准确率
+  FDR=FH/(TH+FH)###误选率
+  HMR=FD/(TH+FD)###漏选率
+  
+  a_data[i,1]<- k
+  a_data[i,2]<-HCR 
+  a_data[i,3]<-FDR 
+  a_data[i,4]<-HMR
+  a_data[i,5]<-label[n]
+  colnames(a_data)<-c("oil","HCR","FDR","HMR","Material")
+}
+max<-a_data[which(a_data[,2]==max(a_data[,2])),]
+oil_n<-mean(max[,1])
+HCR_n<-mean(max[,2])
+FDR_n<-mean(max[,3])
+HMR_n<-mean(max[,4])
+acc_sum_n<-c(oil_n,HCR_n,FDR_n,HMR_n,label[n])
+hh<-t(data.frame(acc_sum_n))
+colnames(hh)<-c("oil","HCR","FDR","HMR","Material")
+acc_sum<-rbind(acc_sum,hh)
+
+res_oil<-rbind(res_oil,a_data)
+}
+
+write.table(acc_sum,"acc_sum.txt")
+write.table(res_oil,"res_oil.txt")
+
+
+```
+
+
+
+```{r}
+
+
+####画图
+library(easyGgplot2)
+library(devtools)
+res_oil$F<-as.numeric(as.character(res_oil$F))
+res_oil$oil<-as.numeric(as.character(res_oil$oil))
+ggplot(res_oil, aes(x = oil, y = F))+
+  geom_line(aes(color = Material),size=1.5)+
+  facet_wrap(~Material)+ 
+  theme(legend.position="none")
+
+
+
+
+
+##p1 <- ggplot(ACC, aes(x = oil, y = HCR))+
+geom_line(aes(color = Material),size=1.5)+
+  labs(title="HCR~Oil",size=10)+
+  theme(plot.title = element_text(hjust = 0.5))  #也就加上这一行
+
+```
+
+
+
+
+```{r}
+
+
+k_oc$group<-as.factor(k_oc$group)
+label<-levels(k_oc$group)
+
+res_oil<-data.frame()
+acc_sum<-data.frame()
+for (n in 1:17){
+data<-k_oc[which(k_oc$group==label[n]),]
+
+dataH<-data[which(data$type=="H"),]  ##筛选单倍体数据集
+dataC<-data[which(data$type=="C"),] ##筛选二倍体数据集
+
+meanoil_H<-mean(dataH$oil)  ##单倍体平均值
+sdoil_H<-sd(dataH$oil)      ##单倍体标准差
+meanoil_C<-mean(dataC$oil)  ##二倍体平均值
+sdoil_C<-sd(dataC$oil)      ##二倍体标准差
+
+
+a_data<-data.frame()  ##建立数据集
+#k<-nrow(dataH)/(nrow(dataC)+nrow(dataH))   ##单倍体比率设置
+k<-hir[which(hir$group==label[n]),2] /100    ##单倍体比率设置
+for (i in 1:1000) {
+  j<-i*0.01
+  W_H<-pnorm(j,meanoil_H,sdoil_H)   
+  W_C<-pnorm(j,meanoil_C,sdoil_C)
+  W<-k*W_H+(1-k)*W_C   
+  Q<-((1-k)*W_C)/W    ###FDR
+  B<-1-W_H            ###FNR 
+  F<-(2*(1-Q)*(1-B))/(2-Q-B)  ###F值
+  acc<-(k*W_H+(1-k)*(1-W_C))
+  a_data[i,1]<- j
+  a_data[i,2]<-Q 
+  a_data[i,3]<-B
+  a_data[i,4]<-F
+  a_data[i,5]<-acc
+  a_data[i,6]<-W_H
+  a_data[i,7]<-W_C
+  a_data[i,8]<-label[n]
+  colnames(a_data)<-c("oil","Q","B","F","acc","W_H","W_C","Material")
+}
+max<-a_data[which(a_data[,4]==max(a_data[,4])),]
+oil_n<-mean(max[,1])
+HCR_n<-mean(max[,2])
+FDR_n<-mean(max[,3])
+F_n<-mean(max[,4])
+acc_n<-mean(max[,5])
+acc_sum_n<-c(oil_n,HCR_n,FDR_n,F_n,acc_n,label[n])
+hh<-t(data.frame(acc_sum_n))
+colnames(hh)<-c("oil","HCR","FDR","F","acc","Material")
+acc_sum<-rbind(acc_sum,hh)
+
+res_oil<-rbind(res_oil,a_data)
+}
+
+acc_sum
+
+write.csv(acc_sum,"acc_sum.csv")
+
+
+res_oil$Material<-factor(res_oil$Material,levels = ll)
+
+####画图
+library(easyGgplot2)
+library(devtools)
+res_oil$F<-as.numeric(as.character(res_oil$F))
+res_oil$oil<-as.numeric(as.character(res_oil$oil))
+
+
+pdf("t_p.pdf", width=8, height=10)
+t_p
+dev.off()
+
+
+
+
+
+```
+
+
+
+```{r}
+res<-fread("res2.txt", data.table=FALSE)
+
+res_cor<-res[,c(1,2,3,5:9)]
+row.names(res_cor)<-res_cor[,1]
+res_cor<-res_cor[,-1]
+library(corrplot)
+mf_cor<-cor(res_cor) #计算相关系数矩阵
+col3 <- colorRampPalette(c("blue", "white", "red")) 
+#cor.plot <- corrplot(corr = mf_cor,col=col3(10),type="upper",tl.pos="d",tl.cex = 0.75) #画右上方 方法默认“圆形“
+#cor.plot <- corrplot(corr = mf_cor,add=TRUE,,order="AOE",type="lower",col=col3(10),method="color",addCoef.col="black",diag=FALSE,tl.pos="n", cl.pos="n",number.cex = 0.7) #画左下方 方法 “颜色”
+
+
+corrplot(corr = mf_cor,order="original",type="upper",tl.pos="d")
+corrplot(corr = mf_cor,add=TRUE, type="lower", method="number",col="black",order="original",diag=FALSE,tl.pos="n", cl.pos="n",insig="pch")
+
+
+
+res<-fread("res2.txt", data.table=FALSE)
+mod_t<-lm(T~FPOC+IOC+HIR,data = res)
+summary(mod_t)
+
+pre_t<-predict(mod_t,res)
+pre_t<-cbind(pre_t,res$T,"T")
+plot(res$T,predict(mod_t,res),xlim = c(1,6),ylim=c(1,6))
+
+mod_f<-lm(F~FPOC+IOC+HIR,data = res)
+summary(mod_f)
+
+pre_f<-predict(mod_f,res)
+pre_f<-cbind(pre_f,res$F,"F")
+plot(res$F,predict(mod_f,res),xlim = c(0.2,1),ylim=c(0.2,1))
+
+
+mod_fdr<-lm(FDR~FPOC+IOC+HIR,data = res)
+summary(mod_fdr)
+
+pre_fdr<-predict(mod_fdr,res)
+pre_fdr<-cbind(pre_fdr,res$FDR,"FDR")
+plot(res$FDR,predict(mod_fdr,res),xlim = c(0,0.8),ylim=c(0,0.8))
+
+
+
+mod_hcr<-lm(HCR~FPOC+IOC+HIR,data = res)
+summary(mod_hcr)
+
+pre_fnr<-predict(mod_hcr,res)
+pre_fnr<-cbind(pre_fnr,res$HCR,"FNR")
+plot(res$HCR,predict(mod_hcr,res),xlim = c(0,0.8),ylim=c(0,0.8))
+
+
+pre_all<-rbind(pre_t,pre_fnr,pre_fdr,pre_f)
+pre_all<-data.frame(pre_all)
+names(pre_all)<-c("Predictive values","Real values","Index")
+pre_all$`Predictive values`<-as.numeric(as.character(pre_all$`Predictive values`))
+pre_all$`Real values`<-as.numeric(as.character(pre_all$`Real values`))
+class(pre_all$`Predictive values`)
+
+
+pre_all$Index<-factor(pre_all$Index,levels = c("T","FNR","FDR","F"))
+pre_p<-ggplot(pre_all, aes(x = `Real values`, y = `Predictive values`, colour = Index)) +
+  geom_point() +
+  # 标尺函数：palette设置配色方案
+  scale_colour_brewer(palette = "Set1") +
+  # 拟合回归线段以及置信域(默认0.95/通过level参数可自定义)
+  geom_smooth(method=lm)+
+  facet_wrap(~Index,nrow=2,scales="free")+ 
+  theme_bw()+
+  guides(fill=FALSE)+
+  theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank())
+
+pdf("pre_p.pdf", width=8, height=8)
+pre_p
+dev.off()
+sqrt(0.33)
+```
+
+
+
+```{r}
+eff<-function(meanoil_H,sdoil_H,meanoil_C,sdoil_C,hir,plot=TRUE,print=TRUE){
+  oc_res<-data.frame()  #建立数据集
+  for (i in 1:1000) {
+    j<-i*0.01
+    W_H<-pnorm(j,meanoil_H,sdoil_H)   
+    W_C<-pnorm(j,meanoil_C,sdoil_C)
+    W<-hir*W_H+(1-hir)*W_C   
+    Q<-((1-hir)*W_C)/W    ###FDR
+    B<-1-W_H            ###FNR 
+    F<-(2*(1-Q)*(1-B))/(2-Q-B)  ###F值
+    acc<-(hir*W_H+(1-hir)*(1-W_C))  ###ACC
+    res_i<-c(j,Q,B,F)
+    oc_res<-rbind(oc_res,res_i)
+    colnames(oc_res)<-c("oil","Q","B","F")
+  }
+  max<-oc_res[which(oc_res[,4]==max(oc_res[,4])),]
+  oil_n<-mean(max[,1])
+  HCR_n<-mean(max[,2])
+  FDR_n<-mean(max[,3])
+  F_n<-mean(max[,4])
+  acc_sum<-c(oil_n,HCR_n,FDR_n,F_n)
+  hh<-t(data.frame(acc_sum))
+  colnames(hh)<-c("oil","FNR","FDR","F")
+  oo<-list(oc_res,hh)
+  if (plot == TRUE ){
+    plot(oc_res$oil,oc_res$F,type="b",pch=15,lty=1,col="red",ylim=c(0,1),main= "",
+    xlab = "Oil content threshold (t) / %", ylab = "Value")
+    lines(oc_res$oil,oc_res$B,type ="b",pch=17,lty=2,col="blue")
+    lines(oc_res$oil,oc_res$Q,type ="b",pch=18,lty=3,col="green")
+    legend("topleft",inset=0.05,title="Index",c("F","FNR","FDR"),lty=c(1,2,3),pch=c(15,17,18),col =c("red","blue","green"))
+  }
+  if (print == TRUE){
+    print(oo[[2]])
+  }
+}
+
+
+
+c<-eff(4,0.6,6,0.6,0.12)
+
+plot(c$F)
+```
+

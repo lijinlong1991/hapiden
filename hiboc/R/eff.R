@@ -12,12 +12,12 @@
 #   Test Package:              'Cmd + Shift + T'
 
 
-eff<-function(meanoil_H,sdoil_H,meanoil_C,sdoil_C,hir,plot=TRUE,print=TRUE){
+eff<-function(m_H,sd_H,m_C,sd_C,hir,plot=TRUE,print=TRUE){
   oc_res<-data.frame()  #建立数据集
   for (i in 1:1000) {
     j<-i*0.01
-    W_H<-pnorm(j,meanoil_H,sdoil_H)
-    W_C<-pnorm(j,meanoil_C,sdoil_C)
+    W_H<-pnorm(j,m_H,sd_H)
+    W_C<-pnorm(j,m_C,sd_C)
     W<-hir*W_H+(1-hir)*W_C
     Q<-((1-hir)*W_C)/W    ###FDR
     B<-1-W_H            ###FNR
@@ -46,4 +46,5 @@ eff<-function(meanoil_H,sdoil_H,meanoil_C,sdoil_C,hir,plot=TRUE,print=TRUE){
   if (print == TRUE){
     print(oo[[2]])
   }
+  return(oo)
 }
