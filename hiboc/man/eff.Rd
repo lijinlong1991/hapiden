@@ -1,21 +1,27 @@
 \name{eff}
 \alias{eff}
-\title{haploid identification by oil content!}
+\title{Haploid identification by oil content!}
 \usage{
-eff(meanoil_H,sdoil_H,meanoil_C,sdoil_C,hir,plot=TRUE,print=TRUE)
+eff(ml_H,sd_H,m_C,sd_C,hir,plot=TRUE,print=TRUE)
 }
 \description{
-meanoil_H: The mean oil content of hapliod kernels.
-sdoil_H: The standard deviation of haploid kernels.
-meanoil_C: The mean oil content of crossed kernels.
-sdoil_C: The standard deviation of crossed kernels.
-hir: Haploid induce rate
+m_H: The mean oil content of hapliod kernels.
+
+sd_H: The standard deviation of haploid kernels.
+
+m_C: The mean oil content of crossed kernels.
+
+sd_C: The standard deviation of crossed kernels.
+
+hir: Haploid induce rate.
+
 plot: TRUE or FALSE, plot the result.
+
 print: TRUE or FALSE, print the result.
 }
 \examples{
 ## Estimate the efficiency and print the best oil content threshold
-eff(meanoil_H=4.2,sdoil_H=0.6,meanoil_C=5.8,sdoil_C=0.7,hir=0.15,plot=TRUE,print=TRUE)
+eff(m_H=4.2,sd_H=0.6,m_C=5.8,sd_C=0.7,hir=0.15,plot=TRUE,print=TRUE)
 ## or
 eff(4,0.6,6,0.6,0.12)
 }
